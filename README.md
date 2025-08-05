@@ -27,10 +27,6 @@ pip install -r requirements-dev.txt
 
 # Execute os testes
 pytest tests/
-
-# Inicie o servidor de desenvolvimento
-uvicorn src.main:app --reload
-
 📄 Licença
 
 MIT License - Veja o arquivo LICENSE para detalhes.
