@@ -1,32 +1,218 @@
+API - Documentação Completa
 🔧 Variáveis de Ambiente
-Variável	Descrição	Exemplo
-POSTGRES_HOST	Host do banco de dados PostgreSQL	db (local) ou RDS endpoint
-POSTGRES_USER	Usuário do PostgreSQL	user
-POSTGRES_PASSWORD	Senha do PostgreSQL	password
-POSTGRES_DB	Nome do banco de dados	publications
-AMQP_URL	URL de conexão com RabbitMQ	amqp://guest:guest@rabbitmq
-AMQP_EXCHANGE_NAME	Nome do exchange no RabbitMQ	diario_oficial
-AMQP_ROUTING_KEY	Routing key para publicação	publications.new
-📊 Endpoints
 
-    POST /upload - Processa arquivo ZIP com XMLs
+A aplicação utiliza as seguintes variáveis de ambiente para configuração:
+Configurações do Banco de Dados
+Variável	Descrição	Exemplo	Obrigatório
+POSTGRES_HOST	Endereço do servidor PostgreSQL	db (Docker) ou rds.amazonaws.com	Sim
+POSTGRES_USER	Usuário para autenticação	user	Sim
+POSTGRES_PASSWORD	Senha para autenticação	password	Sim
+POSTGRES_DB	Nome do banco de dados	publications	Sim
+POSTGRES_PORT	Porta de conexão (opcional)	5432	Não
+Configurações do RabbitMQ
+Variável	Descrição	Exemplo	Obrigatório
+AMQP_URL	URL completa de conexão	amqp://guest:guest@rabbitmq	Sim
+AMQP_EXCHANGE_NAME	Nome do exchange para publicações	diario_oficial	Sim
+AMQP_ROUTING_KEY	Chave de roteamento padrão	publications.new	Sim
+AMQP_QUEUE	Nome da fila (opcional)	publications_queue	Não
+Configurações da Aplicação
+Variável	Descrição	Exemplo	Obrigatório
+API_PORT	Porta onde a API rodará	8000	Não
+DEBUG	Modo debug (True/False)	False	Não
+LOG_LEVEL	Nível de log (DEBUG, INFO, WARNING, ERROR)	INFO	Não
+📊 Endpoints da API
+1. Upload de Arquivos
 
-    GET /publications - Lista publicações (com paginação)
+    Método: POST /upload
 
-    GET /publications/{id} - Obtém uma publicação específica
+    Descrição: Processa arquivos ZIP contendo XMLs do Diário Oficial
 
-    GET /publications/count - Contagem total de publicações
+    Content-Type: multipart/form-data
 
-🛠️ Desenvolvimento
+    Parâmetro: file (arquivo ZIP)
 
-Para desenvolvimento local:
+    Respostas:
+
+        201: Arquivo processado com sucesso
+
+        400: Erro no formato do arquivo
+
+        500: Erro interno no processamento
+
+2. Listagem de Publicações
+
+    Método: GET /publications
+
+    Parâmetros:
+
+        skip: Número de registros para pular (padrão: 0)
+
+        limit: Número máximo de registros (padrão: 100, máximo: 1000)
+
+        start_date: Filtro por data inicial (formato YYYY-MM-DD)
+
+        end_date: Filtro por data final (formato YYYY-MM-DD)
+
+        art_type: Filtro por tipo de artigo
+
+        search: Busca textual nos campos
+
+    Exemplo:
+    bash
+
+    curl "http://localhost:8000/publications?limit=10&start_date=2023-01-01"
+
+3. Detalhes da Publicação
+
+    Método: GET /publications/{id}
+
+    Exemplo:
+    bash
+
+    curl "http://localhost:8000/publications/12345"
+
+4. Contagem de Publicações
+
+    Método: GET /publications/count
+
+    Parâmetro opcional: art_type (filtrar por tipo)
+
+    Exemplo:
+    bash
+
+    curl "http://localhost:8000/publications/count?art_type=Lei"
+
+🛠️ Desenvolvimento Local
+Pré-requisitos
+
+    Python 3.12+
+
+    PostgreSQL
+
+    RabbitMQ
+
+Configuração do Ambiente
+
+    Clone o repositório:
+    bash
+
+git clone https://github.com/seu-usuario/diario-oficial-api.git
+cd diario-oficial-api
+
+Crie e ative um ambiente virtual:
 bash
 
-# Instale as dependências
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# ou
+venv\Scripts\activate     # Windows
+
+Instale as dependências:
+bash
+
 pip install -r requirements-dev.txt
 
-# Execute os testes
-pytest tests/
-📄 Licença
+Configure as variáveis de ambiente:
+bash
 
-MIT License - Veja o arquivo LICENSE para detalhes.
+cp .env.example .env
+# Edite o arquivo .env com suas configurações
+
+Execute os testes:
+bash
+
+pytest tests/ -v
+
+Inicie a aplicação:
+bash
+
+    uvicorn src.main:app --reload
+
+☁️ Pipeline CI/CD com GitHub Actions e AWS
+Fluxo do Pipeline
+
+    Trigger: Acionado por push na branch main ou por pull requests
+
+    Testes:
+
+        Instalação de dependências
+
+        Execução de testes unitários e de integração
+
+    Build e Deploy (apenas se os testes passarem):
+
+        Construção da imagem Docker
+
+        Push para o Amazon ECR
+
+        Deploy automático no ECS
+
+Configuração Necessária
+
+    Secrets no GitHub:
+
+        AWS_ACCESS_KEY_ID: Chave de acesso AWS
+
+        AWS_SECRET_ACCESS_KEY: Chave secreta AWS
+
+        AWS_REGION: Região AWS (ex: us-east-1)
+
+        ECR_REPOSITORY: Nome do repositório ECR
+
+        ECS_CLUSTER: Nome do cluster ECS
+
+        ECS_SERVICE: Nome do serviço ECS
+
+    Arquivos de Configuração:
+
+        .github/workflows/deploy.yml: Define as etapas do pipeline
+
+        .aws/task-definition.json: Configuração do container no ECS
+
+Estrutura do Pipeline
+yaml
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # ... (etapas de teste)
+    
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      # ... (etapas de build e deploy)
+
+📦 Implantação com Docker
+1. Construa a imagem localmente:
+bash
+
+docker build -t diario-oficial-api .
+
+2. Execute com Docker Compose:
+bash
+
+docker-compose up -d
+
+3. Acesse a API:
+text
+
+http://localhost:8000/docs
+
+🔍 Monitoramento
+
+    Logs da Aplicação: Visualize em docker-compose logs -f app
+
+    Métricas: Endpoint /metrics (se configurado)
+
+    Health Check: Endpoint /health retorna status da aplicação
